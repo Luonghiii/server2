@@ -2,8 +2,8 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
-# Upgrade pip and install ffmpeg (optional but recommended for yt-dlp merging)
-RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
+# Upgrade pip and install ffmpeg (optional but recommended for yt-dlp merging) and git
+RUN apt-get update && apt-get install -y ffmpeg git && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir --upgrade pip
 
 COPY requirements.txt .
