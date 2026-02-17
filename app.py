@@ -14,7 +14,7 @@ def resolve_video():
 
     try:
         ydl_opts = {
-            'format': 'best',
+            'format': 'best[ext=mp4]/best', # Try mp4 specifically, then safe fallback
             'quiet': True,
             'no_warnings': True,
             'nocheckcertificate': True,
@@ -43,10 +43,40 @@ def resolve_video():
             if not info:
                  return jsonify({"error": "Failed to extract video info"}), 500
             
+            formats = []
+            if 'formats' in info:
+                for f in info['formats']:
+                    # Filter: Only keep mp4/webm, must have video.
+                    # Ideally we want video+audio, but sometimes high quality is video-only.
+                    # For simple direct download, we prioritize video+audio (acodec != 'none').
+                    if f.get('vcodec') != 'none' and f.get('url'):
+                        resolution = f.get('resolution') or f"{f.get('height')}p"
+                        note = f.get('format_note') or ''
+                        ext = f.get('ext')
+                        has_audio = f.get('acodec') != 'none'
+                        
+                        # Label it clearly
+                        label = f"{resolution} ({ext})"
+                        if not has_audio:
+                            label += " [No Audio]"
+                        
+                        formats.append({
+                            "resolution": label,
+                            "url": f['url'],
+                            "ext": ext,
+                            "has_audio": has_audio,
+                            "filesize": f.get('filesize'),
+                            "tbr": f.get('tbr') # bitrate for sorting
+                        })
+            
+            # Sort best first
+            formats.sort(key=lambda x: x.get('tbr') or 0, reverse=True)
+
             return jsonify({
                 "title": info.get('title', 'Unknown Title'),
-                "url": info.get('url') or (info.get('entries')[0].get('url') if info.get('entries') else None),
-                "thumbnail": info.get('thumbnail')
+                "thumbnail": info.get('thumbnail'),
+                "formats": formats, # Return list of formats
+                "url": info.get('url') or (info.get('entries')[0].get('url') if info.get('entries') else None) # Default fallback
             })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
