@@ -14,8 +14,8 @@ def resolve_video():
 
     try:
         ydl_opts = {
-            # Default format selection (don't force 'best[ext=mp4]/best' as it can fail)
-            # 'format': 'best', 
+            # Force 'best' (single file) to avoid merging issues if ffmpeg is missing
+            'format': 'best', 
             'quiet': True,
             'no_warnings': True,
             'nocheckcertificate': True,
