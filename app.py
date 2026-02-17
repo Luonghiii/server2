@@ -18,7 +18,7 @@ def resolve_video():
             'quiet': True,
             'no_warnings': True,
             'nocheckcertificate': True,
-            'ignoreerrors': True,
+            'ignoreerrors': False, # Changed to False to catch the actual error
             'logtostderr': False,
             'default_search': 'auto',
             'source_address': '0.0.0.0',
@@ -32,11 +32,20 @@ def resolve_video():
                 'Sec-Fetch-Mode': 'navigate',
             }
         }
+
+        # Check for cookies.txt
+        import os
+        if os.path.exists('cookies.txt'):
+             ydl_opts['cookiefile'] = 'cookies.txt'
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
+            if not info:
+                 return jsonify({"error": "Failed to extract video info"}), 500
+            
             return jsonify({
                 "title": info.get('title', 'Unknown Title'),
-                "url": info.get('url'),
+                "url": info.get('url') or (info.get('entries')[0].get('url') if info.get('entries') else None),
                 "thumbnail": info.get('thumbnail')
             })
     except Exception as e:
