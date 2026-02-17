@@ -14,7 +14,8 @@ def resolve_video():
 
     try:
         ydl_opts = {
-            'format': 'best[ext=mp4]/best', # Try mp4 specifically, then safe fallback
+            # Default format selection (don't force 'best[ext=mp4]/best' as it can fail)
+            # 'format': 'best', 
             'quiet': True,
             'no_warnings': True,
             'nocheckcertificate': True,
