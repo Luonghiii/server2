@@ -83,4 +83,23 @@ def resolve_video():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
+    # Debug checks on startup
+    import os
+    import shutil
+    import yt_dlp.version
+
+    print(f"--- SERVER 2 STARTUP ---")
+    print(f"yt-dlp version: {yt_dlp.version.__version__}")
+    
+    ffmpeg_path = shutil.which('ffmpeg')
+    if ffmpeg_path:
+        print(f"FFmpeg found at: {ffmpeg_path}")
+    else:
+        print("WARNING: FFmpeg NOT FOUND! High quality video merging will fail. Please install FFmpeg.")
+    
+    if os.path.exists('cookies.txt'):
+         print("Cookies.txt FOUND! YouTube should work.")
+    else:
+         print("WARNING: Cookies.txt NOT FOUND! YouTube might block requests (Sign in error).")
+    
     app.run(host='0.0.0.0', port=5000)
