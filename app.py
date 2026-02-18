@@ -7,6 +7,10 @@ import tempfile
 app = Flask(__name__)
 CORS(app)
 
+@app.route('/')
+def index():
+    return send_file('test_client.html')
+
 @app.route('/download', methods=['POST'])
 def download_video():
     data = request.get_json()

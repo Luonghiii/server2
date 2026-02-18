@@ -1,18 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Downloader Test</title>
     <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; }
-        input { width: 100%; padding: 0.5rem; margin-bottom: 1rem; }
-        button { padding: 0.5rem 1rem; cursor: pointer; }
-        pre { background: #f4f4f4; padding: 1rem; overflow-x: auto; }
-        .result { margin-top: 1rem; border: 1px solid #ddd; padding: 1rem; display: none; }
-        img { max-width: 100%; height: auto; margin-bottom: 1rem; }
+        body {
+            font-family: sans-serif;
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+        }
+
+        pre {
+            background: #f4f4f4;
+            padding: 1rem;
+            overflow-x: auto;
+        }
+
+        .result {
+            margin-top: 1rem;
+            border: 1px solid #ddd;
+            padding: 1rem;
+            display: none;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
+
 <body>
     <h1>API Client Test</h1>
     <input type="text" id="urlInput" placeholder="Paste video URL here (YouTube, TikTok, FB, etc.)">
@@ -33,12 +65,12 @@
         async function resolveVideo() {
             const url = document.getElementById('urlInput').value;
             const resultArea = document.getElementById('resultArea');
-            
+
             if (!url) return alert('Please enter a URL');
 
             try {
                 // Call the API running on localhost:3000
-                const response = await fetch(`http://localhost:3000/api/resolve?url=${encodeURIComponent(url)}`);
+                const response = await fetch(`/api/resolve?url=${encodeURIComponent(url)}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -52,7 +84,7 @@
                 document.getElementById('duration').textContent = data.duration;
                 document.getElementById('downloadLink').href = data.url;
                 document.getElementById('jsonOutput').textContent = JSON.stringify(data, null, 2);
-                
+
                 resultArea.style.display = 'block';
 
             } catch (error) {
@@ -62,4 +94,5 @@
         }
     </script>
 </body>
+
 </html>
