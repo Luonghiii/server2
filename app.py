@@ -28,6 +28,8 @@ def download_video():
                 'quiet': True,
                 'no_warnings': True,
             }
+            if os.path.exists('cookies.txt'):
+                ydl_opts['cookiefile'] = 'cookies.txt'
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(video_url, download=True)
