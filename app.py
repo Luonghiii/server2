@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import yt_dlp
+import requests
 import os
 
 app = Flask(__name__)
@@ -8,51 +8,58 @@ CORS(app)
 
 @app.route('/api/resolve', methods=['GET', 'POST'])
 def resolve_video():
+    # Lấy URL linh hoạt
     url = request.args.get('url') or (request.json.get('url') if request.json else None)
     
     if not url:
-        return jsonify({"error": "Cậu chưa dán link kìa!"}), 400
+        return jsonify({"error": "Cậu quên dán link rồi kìa!"}), 400
 
     try:
-        ydl_opts = {
-            'quiet': True,
-            'no_warnings': True,
-            # 'extract_flat': True, # Bỏ comment nếu vẫn lỗi, nhưng sẽ ít thông tin hơn
-            'cookiefile': 'cookies.txt' if os.path.exists('cookies.txt') else None,
-            'nocheckcertificate': True,
-            'ignoreerrors': True, # Cực kỳ quan trọng: Bỏ qua lỗi nhỏ để trả về kết quả
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            }
+        # Gọi tới API của Cobalt (Instance công khai)
+        cobalt_api = "https://api.cobalt.tools/api/json"
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "url": url,
+            "vQuality": "1080", # Cậu có thể chỉnh 720, 1080, 4k...
+            "isAudioOnly": False
         }
 
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Lấy thông tin metadata
-            info = ydl.extract_info(url, download=False)
-            
-            if not info:
-                return jsonify({"error": "Không lấy được thông tin video rồi ní ơi!"}), 500
+        response = requests.post(cobalt_api, json=payload, headers=headers)
+        data = response.json()
 
-            # Lọc lại danh sách format để trả về JSON sạch
-            formats = []
-            if 'formats' in info:
-                for f in info['formats']:
-                    if f.get('url'):
-                        formats.append({
-                            "quality": f.get('format_note') or f.get('resolution'),
-                            "ext": f.get('ext'),
-                            "url": f.get('url'),
-                            "size": f.get('filesize')
-                        })
-
+        # Kiểm tra nếu Cobalt trả về link trực tiếp
+        if data.get('status') == 'stream':
             return jsonify({
-                "title": info.get('title'),
-                "thumbnail": info.get('thumbnail'),
-                "formats": formats[::-1]
+                "title": "Video từ Cobalt",
+                "thumbnail": "", 
+                "formats": [
+                    {
+                        "resolution": "Định dạng tốt nhất",
+                        "ext": "mp4",
+                        "url": data.get('url'),
+                        "note": "Link tải trực tiếp từ Cobalt"
+                    }
+                ]
             })
-            
+        
+        # Nếu Cobalt trả về danh sách (Pick)
+        elif data.get('status') == 'picker':
+            formats = []
+            for item in data.get('picker', []):
+                formats.append({
+                    "resolution": item.get('type', 'video'),
+                    "ext": "url",
+                    "url": item.get('url')
+                })
+            return jsonify({ "formats": formats[::-1] })
+
+        return jsonify({"error": data.get('text', 'Lỗi không xác định từ Cobalt')}), 500
+
     except Exception as e:
-        return jsonify({"error": f"Lỗi rồi: {str(e)}"}), 500
+        return jsonify({"error": f"Lỗi hệ thống: {str(e)}"}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
