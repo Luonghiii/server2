@@ -7,22 +7,22 @@ app = Flask(__name__)
 CORS(app)
 
 def format_size(bytes):
-    # Chuyển đổi bytes sang đơn vị MB để dễ đọc
+    # Chuyển đổi dung lượng từ byte sang MB
     if bytes:
         return f"{bytes / (1024 * 1024):.2f} MB"
     return "Unknown size"
 
 @app.route('/')
 def home():
-    # Trang chủ chỉ trả về thông tin trạng thái đơn giản 
+    # Trang chủ để Render Health Check
     return jsonify({
         "status": "API is running",
-        "usage": "GET/POST to /api/resolve?url=YOUR_LINK"
+        "message": "Chào Cậu! Dùng /api/resolve?url=LINK để lấy JSON nhé."
     })
 
 @app.route('/api/resolve', methods=['GET', 'POST'])
 def resolve_video():
-    # Lấy URL linh hoạt từ query hoặc JSON 
+    # Lấy URL linh hoạt từ tham số query hoặc body JSON
     if request.method == 'POST':
         data = request.json or {}
         url = data.get('url')
@@ -33,30 +33,33 @@ def resolve_video():
         return jsonify({"error": "Cậu chưa cung cấp link video nè!"}), 400
 
     try:
-        # Tối ưu ydl_opts để không bị lỗi "format not available" 
+        # Đường dẫn file cookie nằm cùng thư mục gốc
+        cookie_path = 'cookies.txt'
+        
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
             'nocheckcertificate': True,
-            # Xóa cấu hình 'format': 'best' để tránh ép buộc định dạng không tồn tại
-            'cookiefile': 'cookies.txt' if os.path.exists('cookies.txt') else None,
+            # KHÔNG để cấu hình 'format' ở đây để tránh lỗi "format not available"
+            'cookiefile': cookie_path if os.path.exists(cookie_path) else None,
             'http_headers': {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
             }
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Chỉ lấy thông tin, không ép buộc định dạng tải lúc này 
+            # [cite_start]Chỉ trích xuất thông tin, không tải video [cite: 4]
             info = ydl.extract_info(url, download=False)
             
             if '_type' in info and info['_type'] == 'playlist':
                 return jsonify({"error": "Hiện tại tớ chỉ hỗ trợ video đơn lẻ."}), 400
             
             formats_list = []
-            # Duyệt qua tất cả định dạng có sẵn mà YouTube cung cấp 
+            # [cite_start]Duyệt qua danh sách formats để lấy URL trực tiếp [cite: 4]
             for f in info.get('formats', []):
                 if f.get('url'):
-                    # Thu thập thông tin định dạng để trả về cho Cậu 
                     formats_list.append({
                         "format_id": f.get('format_id'),
                         "resolution": f.get('resolution') or f"{f.get('height')}p",
@@ -70,13 +73,12 @@ def resolve_video():
             return jsonify({
                 "title": info.get('title'),
                 "thumbnail": info.get('thumbnail'),
-                "formats": formats_list[::-1] # Đảo ngược để chất lượng cao lên đầu 
+                "formats": formats_list[::-1] # Chất lượng cao lên đầu
             })
     except Exception as e:
-        # Trả về thông báo lỗi chi tiết nếu có sự cố 
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    # Tự động nhận diện cổng từ Render 
+    # Nhận cổng PORT động từ Render
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
