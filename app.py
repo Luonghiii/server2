@@ -6,57 +6,60 @@ import os
 app = Flask(__name__)
 CORS(app)
 
+@app.route('/')
+def home():
+    # Trang chủ để Render Health Check, tránh lỗi 404
+    return jsonify({
+        "status": "API is running",
+        "message": "Chào Cậu! Hãy dùng /api/resolve?url=LINK để lấy JSON nhé."
+    })
+
 @app.route('/api/resolve', methods=['GET', 'POST'])
 def resolve_video():
-    # Lấy URL linh hoạt
+    # Lấy URL linh hoạt từ query hoặc JSON body
     url = request.args.get('url') or (request.json.get('url') if request.json else None)
     
     if not url:
-        return jsonify({"error": "Cậu quên dán link rồi kìa!"}), 400
+        return jsonify({"error": "Cậu chưa dán link kìa!"}), 400
 
     try:
-        # Gọi tới API của Cobalt (Instance công khai)
-        cobalt_api = "https://api.cobalt.tools/api/json"
+        # Sử dụng instance chính thức của Cobalt v10
+        cobalt_api = "https://api.cobalt.tools/"
         headers = {
             "Accept": "application/json",
             "Content-Type": "application/json"
         }
+        
+        # Cấu hình Payload theo chuẩn v10
         payload = {
             "url": url,
-            "vQuality": "1080", # Cậu có thể chỉnh 720, 1080, 4k...
-            "isAudioOnly": False
+            "videoQuality": "720", # v10 hỗ trợ "max", "1080", "720"...
+            "filenameStyle": "pretty"
         }
 
         response = requests.post(cobalt_api, json=payload, headers=headers)
         data = response.json()
 
-        # Kiểm tra nếu Cobalt trả về link trực tiếp
+        # Xử lý phản hồi từ Cobalt
         if data.get('status') == 'stream':
             return jsonify({
-                "title": "Video từ Cobalt",
-                "thumbnail": "", 
+                "title": "Video đã xử lý",
                 "formats": [
                     {
-                        "resolution": "Định dạng tốt nhất",
-                        "ext": "mp4",
+                        "resolution": "Best Available",
                         "url": data.get('url'),
-                        "note": "Link tải trực tiếp từ Cobalt"
+                        "ext": "mp4"
                     }
                 ]
             })
-        
-        # Nếu Cobalt trả về danh sách (Pick)
         elif data.get('status') == 'picker':
-            formats = []
-            for item in data.get('picker', []):
-                formats.append({
-                    "resolution": item.get('type', 'video'),
-                    "ext": "url",
-                    "url": item.get('url')
-                })
-            return jsonify({ "formats": formats[::-1] })
+            return jsonify({
+                "title": "Nhiều lựa chọn",
+                "formats": data.get('picker')
+            })
 
-        return jsonify({"error": data.get('text', 'Lỗi không xác định từ Cobalt')}), 500
+        # Nếu có lỗi từ phía Cobalt (như link không hỗ trợ)
+        return jsonify({"error": data.get('text', 'Lỗi không xác định từ server Cobalt')}), 400
 
     except Exception as e:
         return jsonify({"error": f"Lỗi hệ thống: {str(e)}"}), 500
